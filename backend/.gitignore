@@ -2,6 +2,7 @@
 
 __pycache__/
 
+.deploy/
 
 db.sqlite3
 
