@@ -1,8 +1,9 @@
 .env
 
+.deploy/
+
 __pycache__/
 
-.deploy/
 
 db.sqlite3
 
