@@ -100,6 +100,8 @@ INSTALLED_APPS = [
     "cloudinary_storage",
 
     # local apps
+    'quiz',
+    'api',
 
     
 ]
