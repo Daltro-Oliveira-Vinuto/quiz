@@ -29,7 +29,20 @@ export function Home({ onStart, onRanking }: Props) {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerTop}>
-          <h1 className={styles.logo}>🧠 QuizApp</h1>
+
+          <div className={styles.logoContainer}>
+          <img
+            src={import.meta.env.VITE_LOGO_URL}
+            alt="Museu Virtual da FEB"
+            className={styles.logoImage}
+          />
+
+          <h1 className={styles.logo}>
+            Quiz do Museu Virtual da FEB
+          </h1>
+          
+        </div>
+          
           <button className={styles.rankingBtn} onClick={onRanking}>
             🏆 Ranking geral
           </button>

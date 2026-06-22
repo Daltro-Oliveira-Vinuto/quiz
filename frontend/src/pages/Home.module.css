@@ -70,3 +70,25 @@
   background: #eef2ff;
 }
 
+.logoContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.logoImage {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+}
+
+.logo {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #4f46e5;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
