@@ -1,6 +1,6 @@
 import type { AnswerResult, QuizDetail, QuizListItem, SessionResult } from "../types/quiz";
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+const BASE = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api").replace(/\/$/, "");
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -15,7 +15,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  listQuizzes: () => request<QuizListItem[]>("/quizzes/"),
+  listQuizzes: () =>
+  request<{ results: QuizListItem[] }>("/quizzes/")
+    .then((data) => data.results),
 
   getQuiz: (id: number) => request<QuizDetail>(`/quizzes/${id}/`),
 

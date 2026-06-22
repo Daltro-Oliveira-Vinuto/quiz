@@ -1,5 +1,3 @@
-# backend/quiz/serializers.py
-
 from rest_framework import serializers
 from .models import Category, Quiz, Question, Choice, QuizSession
 
@@ -26,9 +24,12 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ["id", "text", "image_url", "choices", "order"]
 
     def get_image_url(self, obj):
-        if obj.image:
-            return obj.image.url
-        return None
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
 
 
 class QuizListSerializer(serializers.ModelSerializer):
@@ -54,7 +55,8 @@ class QuizDetailSerializer(serializers.ModelSerializer):
 
     def get_questions(self, obj):
         qs = obj.questions.prefetch_related("choices").order_by("?")[: obj.questions_per_session]
-        return QuestionSerializer(qs, many=True).data
+        # context=self.context passes the request down so image URLs are absolute
+        return QuestionSerializer(qs, many=True, context=self.context).data
 
 
 # ---- Answer checking ----
@@ -102,5 +104,3 @@ class QuizSessionResultSerializer(serializers.ModelSerializer):
             "score", "total_questions", "percentage",
             "completed", "started_at", "finished_at",
         ]
-
-
