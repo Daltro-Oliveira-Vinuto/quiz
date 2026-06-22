@@ -38,6 +38,7 @@ export function Home({ onStart, onRanking }: Props) {
           <h1 className={styles.logo}>
             Quiz do Museu Virtual da FEB
           </h1>
+          </div>
 
           <button className={styles.rankingBtn} onClick={onRanking}>
             🏆 Ranking geral
