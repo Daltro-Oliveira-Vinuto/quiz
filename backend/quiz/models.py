@@ -31,7 +31,7 @@ class Quiz(models.Model):
     class Meta:
         verbose_name = "Quiz"
         verbose_name_plural = "Quizzes"
-        ordering = ["-created_at"]
+        ordering = ["title"]
 
     def __str__(self):
         return self.title
