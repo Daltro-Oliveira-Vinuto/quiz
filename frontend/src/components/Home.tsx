@@ -16,13 +16,10 @@ export function Home({ onStart, onRanking }: Props) {
 
   useEffect(() => {
     api
-    .listQuizzes()
-    .then((data) => {
-      console.log("data:", data);
-      setQuizzes(data);
-    })
-    .catch(() => setError("Não foi possível carregar os quizzes."))
-    .finally(() => setLoading(false));
+      .listQuizzes()
+      .then(setQuizzes)
+      .catch(() => setError("Não foi possível carregar os quizzes."))
+      .finally(() => setLoading(false));
   }, []);
 
   return (

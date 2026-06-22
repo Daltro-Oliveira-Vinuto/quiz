@@ -9,11 +9,12 @@ import styles from "./QuizPage.module.css";
 interface Props {
   quizId: number;
   onHome: () => void;
+  onRanking: () => void;
 }
 
 type Phase = "name" | "playing" | "result";
 
-export function QuizPage({ quizId, onHome }: Props) {
+export function QuizPage({ quizId, onHome, onRanking }: Props) {
   const [quiz, setQuiz] = useState<QuizDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,7 +40,7 @@ export function QuizPage({ quizId, onHome }: Props) {
       const session = await api.createSession(quizId, name);
       sessionIdRef.current = session.id;
     } catch {
-      // session creation failure is non-blocking
+      // non-blocking
     }
     setPlayerName(name);
     setPhase("playing");
@@ -53,11 +54,8 @@ export function QuizPage({ quizId, onHome }: Props) {
     const nextIndex = currentIndex + 1;
 
     if (nextIndex >= quiz.questions.length) {
-      // Quiz finished
       if (sessionIdRef.current) {
-        api
-          .finishSession(sessionIdRef.current, newScore, quiz.questions.length)
-          .catch(() => {});
+        api.finishSession(sessionIdRef.current, newScore, quiz.questions.length).catch(() => {});
       }
       setPhase("result");
     } else {
@@ -83,9 +81,7 @@ export function QuizPage({ quizId, onHome }: Props) {
     return (
       <div className={styles.center}>
         <p className={styles.stateError}>{error || "Quiz não encontrado."}</p>
-        <button className={styles.backBtn} onClick={onHome}>
-          ← Voltar
-        </button>
+        <button className={styles.backBtn} onClick={onHome}>← Voltar</button>
       </div>
     );
   }
@@ -93,7 +89,6 @@ export function QuizPage({ quizId, onHome }: Props) {
   return (
     <div className={styles.page}>
       <div className={styles.container}>
-        {/* Name entry */}
         {phase === "name" && (
           <div className={styles.nameCard}>
             <h2 className={styles.quizTitle}>{quiz.title}</h2>
@@ -116,23 +111,16 @@ export function QuizPage({ quizId, onHome }: Props) {
               autoFocus
             />
             <div className={styles.nameActions}>
-              <button className={styles.backBtn} onClick={onHome}>
-                ← Voltar
-              </button>
-              <button className={styles.startBtn} onClick={handleStart}>
-                Começar →
-              </button>
+              <button className={styles.backBtn} onClick={onHome}>← Voltar</button>
+              <button className={styles.startBtn} onClick={handleStart}>Começar →</button>
             </div>
           </div>
         )}
 
-        {/* Playing */}
         {phase === "playing" && (
           <>
             <div className={styles.topBar}>
-              <button className={styles.backLink} onClick={onHome}>
-                ← Sair
-              </button>
+              <button className={styles.backLink} onClick={onHome}>← Sair</button>
               <ProgressBar current={currentIndex + 1} total={quiz.questions.length} />
             </div>
             <QuestionCard
@@ -145,7 +133,6 @@ export function QuizPage({ quizId, onHome }: Props) {
           </>
         )}
 
-        {/* Result */}
         {phase === "result" && (
           <ResultCard
             score={score}
@@ -153,6 +140,7 @@ export function QuizPage({ quizId, onHome }: Props) {
             playerName={playerName}
             onRestart={handleRestart}
             onHome={onHome}
+            onRanking={onRanking}
           />
         )}
       </div>

@@ -1,9 +1,5 @@
-# backend/quiz/views.py
-
-from django.shortcuts import render
-
-# Create your views here.
 from django.utils import timezone
+from django.db.models import Max, Count, Avg
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -17,6 +13,7 @@ from .serializers import (
     AnswerResultSerializer,
     QuizSessionCreateSerializer,
     QuizSessionResultSerializer,
+    RankingSerializer,
 )
 
 
@@ -25,6 +22,7 @@ class QuizListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = QuizListSerializer
     queryset = Quiz.objects.filter(is_active=True).select_related("category")
+    pagination_class = None
 
 
 class QuizDetailView(generics.RetrieveAPIView):
@@ -37,11 +35,6 @@ class QuizDetailView(generics.RetrieveAPIView):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def check_answer(request):
-    """
-    POST /api/quiz/answer/
-    Body: { question_id, choice_id }
-    Returns: { is_correct, correct_choice_id, explanation }
-    """
     serializer = AnswerSubmitSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
@@ -60,7 +53,6 @@ def check_answer(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def create_session(request):
-    """POST /api/quiz/session/ — start a new quiz session."""
     serializer = QuizSessionCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     session = serializer.save()
@@ -70,10 +62,6 @@ def create_session(request):
 @api_view(["PATCH"])
 @permission_classes([AllowAny])
 def finish_session(request, pk):
-    """
-    PATCH /api/quiz/session/<pk>/finish/
-    Body: { score, total_questions }
-    """
     try:
         session = QuizSession.objects.get(pk=pk)
     except QuizSession.DoesNotExist:
@@ -86,3 +74,71 @@ def finish_session(request, pk):
     session.save()
 
     return Response(QuizSessionResultSerializer(session).data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def ranking(request):
+    """
+    GET /api/ranking/?quiz_id=<id>
+    Returns best score per player_name, ordered by percentage desc.
+    Excludes 'Anônimo' and incomplete sessions.
+    Optional filter by quiz_id.
+    """
+    quiz_id = request.query_params.get("quiz_id")
+
+    qs = QuizSession.objects.filter(
+        completed=True,
+        total_questions__gt=0,
+    ).exclude(player_name__iexact="anônimo").exclude(player_name="")
+
+    if quiz_id:
+        qs = qs.filter(quiz_id=quiz_id)
+
+    # Best session per player (by score then most recent)
+    # Group by player_name: pick max score, count games, avg percentage
+    from django.db.models import FloatField, ExpressionWrapper, F
+
+    best_per_player = list(
+        qs.values("player_name")
+        .annotate(
+            best_score=Max("score"),
+            games_played=Count("id"),
+            best_total=Max("total_questions"),
+        )
+        # sem [:50] aqui
+    )
+
+    def sort_key(x):
+        total = x["best_total"] or 1
+        pct = x["best_score"] / total
+        return (-pct, -x["games_played"])
+
+    best_per_player.sort(key=sort_key)
+    best_per_player = best_per_player[:50]
+
+    # Attach quiz title if filtered
+    quiz_title = None
+    if quiz_id:
+        try:
+            from .models import Quiz
+            quiz_title = Quiz.objects.get(pk=quiz_id).title
+        except Quiz.DoesNotExist:
+            pass
+
+    results = []
+    for i, entry in enumerate(best_per_player, start=1):
+        total = entry["best_total"] or 1
+        results.append({
+            "position": i,
+            "player_name": entry["player_name"],
+            "best_score": entry["best_score"],
+            "total_questions": total,
+            "percentage": round((entry["best_score"] / total) * 100),
+            "games_played": entry["games_played"],
+        })
+
+    return Response({
+        "quiz_title": quiz_title,
+        "ranking": results,
+    })

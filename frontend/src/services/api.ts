@@ -1,4 +1,4 @@
-import type { AnswerResult, QuizDetail, QuizListItem, SessionResult } from "../types/quiz";
+import type { AnswerResult, QuizDetail, QuizListItem, RankingResponse, SessionResult } from "../types/quiz";
 
 const BASE = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api").replace(/\/$/, "");
 
@@ -15,9 +15,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  listQuizzes: () =>
-  request<{ results: QuizListItem[] }>("/quizzes/")
-    .then((data) => data.results),
+  listQuizzes: () => request<QuizListItem[]>("/quizzes/"),
 
   getQuiz: (id: number) => request<QuizDetail>(`/quizzes/${id}/`),
 
@@ -38,4 +36,9 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ score, total_questions }),
     }),
+
+  getRanking: (quizId?: number) => {
+    const qs = quizId ? `?quiz_id=${quizId}` : "";
+    return request<RankingResponse>(`/ranking/${qs}`);
+  },
 };

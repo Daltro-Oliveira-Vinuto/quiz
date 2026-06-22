@@ -11,7 +11,6 @@ class CategorySerializer(serializers.ModelSerializer):
 class ChoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Choice
-        # Never expose is_correct to the client during a quiz
         fields = ["id", "text", "order"]
 
 
@@ -45,7 +44,6 @@ class QuizListSerializer(serializers.ModelSerializer):
 
 
 class QuizDetailSerializer(serializers.ModelSerializer):
-    """Returns quiz metadata + shuffled questions for a session."""
     category = CategorySerializer(read_only=True)
     questions = serializers.SerializerMethodField()
 
@@ -55,7 +53,6 @@ class QuizDetailSerializer(serializers.ModelSerializer):
 
     def get_questions(self, obj):
         qs = obj.questions.prefetch_related("choices").order_by("?")[: obj.questions_per_session]
-        # context=self.context passes the request down so image URLs are absolute
         return QuestionSerializer(qs, many=True, context=self.context).data
 
 
@@ -104,3 +101,19 @@ class QuizSessionResultSerializer(serializers.ModelSerializer):
             "score", "total_questions", "percentage",
             "completed", "started_at", "finished_at",
         ]
+
+
+# ---- Ranking ----
+
+class RankingEntrySerializer(serializers.Serializer):
+    position = serializers.IntegerField()
+    player_name = serializers.CharField()
+    best_score = serializers.IntegerField()
+    total_questions = serializers.IntegerField()
+    percentage = serializers.IntegerField()
+    games_played = serializers.IntegerField()
+
+
+class RankingSerializer(serializers.Serializer):
+    quiz_title = serializers.CharField(allow_null=True)
+    ranking = RankingEntrySerializer(many=True)

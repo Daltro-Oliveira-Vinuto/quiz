@@ -6,9 +6,10 @@ interface Props {
   playerName: string;
   onRestart: () => void;
   onHome: () => void;
+  onRanking: () => void;
 }
 
-export function ResultCard({ score, total, playerName, onRestart, onHome }: Props) {
+export function ResultCard({ score, total, playerName, onRestart, onHome, onRanking }: Props) {
   const pct = Math.round((score / total) * 100);
 
   const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "👍" : pct >= 40 ? "📚" : "💪";
@@ -40,21 +41,16 @@ export function ResultCard({ score, total, playerName, onRestart, onHome }: Prop
         </svg>
         <div className={styles.scoreText}>
           <span className={styles.pct}>{pct}%</span>
-          <span className={styles.fraction}>
-            {score}/{total}
-          </span>
+          <span className={styles.fraction}>{score}/{total}</span>
         </div>
       </div>
 
       <p className={styles.msg}>{msg}</p>
 
       <div className={styles.actions}>
-        <button className={styles.btnSecondary} onClick={onHome}>
-          ← Início
-        </button>
-        <button className={styles.btnPrimary} onClick={onRestart}>
-          Tentar novamente
-        </button>
+        <button className={styles.btnSecondary} onClick={onHome}>← Início</button>
+        <button className={styles.btnOutline} onClick={onRanking}>🏆 Ranking</button>
+        <button className={styles.btnPrimary} onClick={onRestart}>Tentar novamente</button>
       </div>
     </div>
   );

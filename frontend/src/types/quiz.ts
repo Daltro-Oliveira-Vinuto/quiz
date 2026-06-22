@@ -42,3 +42,17 @@ export interface SessionResult {
   started_at: string;
   finished_at: string;
 }
+
+export interface RankingEntry {
+  position: number;
+  player_name: string;
+  best_score: number;
+  total_questions: number;
+  percentage: number;
+  games_played: number;
+}
+
+export interface RankingResponse {
+  quiz_title: string | null;
+  ranking: RankingEntry[];
+}

@@ -1,0 +1,152 @@
+.page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+  padding: 2rem 1rem 4rem;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #4f46e5;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 0.2rem 0 0;
+}
+
+.backBtn {
+  background: transparent;
+  color: #6366f1;
+  border: 2px solid #6366f1;
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.backBtn:hover {
+  background: #eef2ff;
+}
+
+.state {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 1rem;
+  padding: 3rem 0;
+}
+
+.stateError {
+  text-align: center;
+  color: #ef4444;
+  font-size: 1rem;
+  padding: 3rem 0;
+}
+
+.tableWrapper {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.08);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.table thead tr {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.table th {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #9ca3af;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.1s;
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: #fafafa;
+}
+
+.table td {
+  padding: 0.85rem 1rem;
+  color: #374151;
+}
+
+.top3 {
+  background: #fefce8 !important;
+}
+
+.top3:hover {
+  background: #fef9c3 !important;
+}
+
+.pos {
+  font-size: 1rem;
+  font-weight: 700;
+  width: 3.5rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.name {
+  font-weight: 600;
+  color: #111827 !important;
+}
+
+.score {
+  font-variant-numeric: tabular-nums;
+  color: #6366f1 !important;
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.games {
+  color: #9ca3af !important;
+  font-size: 0.85rem;
+}
