@@ -40,7 +40,7 @@ class Quiz(models.Model):
 class Question(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="questions")
     text = models.TextField()
-    image = models.ImageField(upload_to="questions/", blank=True, null=True)
+    image = models.ImageField(upload_to="questions/", max_length=300, blank=True, null=True)
     explanation = models.TextField(blank=True, help_text="Explicação exibida após resposta")
     order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
