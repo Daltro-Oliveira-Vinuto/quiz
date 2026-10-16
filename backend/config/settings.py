@@ -155,7 +155,7 @@ TEMPLATES = [
 # ==========================================================
 # DATABASE
 # ==========================================================
-
+"""
 if env("DATABASE_URL", default=None):
     DATABASES = {
         "default": dj_database_url.parse(
@@ -174,7 +174,53 @@ else:
             "PORT": env("DB_PORT"),
         }
     }
+"""
 
+# ==========================================================
+# DATABASE
+# ==========================================================
+from django.core.exceptions import ImproperlyConfigured
+
+DB_ENGINE = env("DB_ENGINE", default="postgres").lower()
+
+DB_BACKENDS = {
+    "postgres": ("django.db.backends.postgresql", "5432"),
+    "mysql": ("django.db.backends.mysql", "3306"),
+}
+
+if DB_ENGINE not in DB_BACKENDS:
+    raise ImproperlyConfigured(
+        f"DB_ENGINE inválido: '{DB_ENGINE}'. Use 'postgres' ou 'mysql'."
+    )
+
+if env("DATABASE_URL", default=None):
+    # O esquema da URL (postgres:// ou mysql://) define o banco
+    DATABASES = {
+        "default": dj_database_url.parse(
+            env("DATABASE_URL"),
+            conn_max_age=600,
+        )
+    }
+else:
+    backend, default_port = DB_BACKENDS[DB_ENGINE]
+
+    DATABASES = {
+        "default": {
+            "ENGINE": backend,
+            "NAME": env("DB_NAME"),
+            "USER": env("DB_USER"),
+            "PASSWORD": env("DB_PASSWORD"),
+            "HOST": env("DB_HOST", default="127.0.0.1"),
+            "PORT": env("DB_PORT", default=default_port),
+            "CONN_MAX_AGE": 600,
+        }
+    }
+
+    if DB_ENGINE == "mysql":
+        DATABASES["default"]["OPTIONS"] = {
+            "charset": "utf8mb4",
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        }
 
 
 # ==========================================================
