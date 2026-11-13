@@ -1,0 +1,75 @@
+# =====================================================================
+# .htaccess do build do frontend (Apache 2.4)
+#
+# Fica em public/ para que o Vite o copie para a raiz do build
+# (dist/.htaccess), que é a pasta publicada no servidor.
+#
+# Issue #2: bloquear listagem de diretórios e acesso direto a pastas
+# internas / arquivos sensíveis via manipulação da URL.
+#
+# Precisa de "AllowOverride All" no VirtualHost. Módulos: mod_rewrite,
+# mod_headers e mod_authz_core (padrão no Apache 2.4).
+# =====================================================================
+
+# --- 1. Sem listagem de diretórios -----------------------------------
+# /assets/ (ou qualquer pasta) não mostra mais o índice de arquivos.
+# MultiViews desligado evita que /index responda por /index.html.
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+
+# --- 2. Arquivos que nunca devem ser servidos ------------------------
+# Ocultos: .env, .git, .htaccess, .htpasswd, .DS_Store...
+<FilesMatch "^\.(?!well-known$)">
+    Require all denied
+</FilesMatch>
+
+# Source maps, código-fonte, configs, scripts, logs, backups e dumps
+<FilesMatch "\.(map|env|ini|conf|config|log|sh|bash|bat|ps1|py|php|sql|sqlite3?|db|bak|backup|old|orig|save|swp|swo|tmp|dist|lock|ts|tsx|jsx|md)$">
+    Require all denied
+</FilesMatch>
+
+# Manifests e configs de projeto (Node/Vite/TS), caso cheguem ao servidor
+<FilesMatch "^(package(-lock)?\.json|tsconfig(\..+)?\.json|vite\.config\..+|eslint\.config\..+|yarn\.lock|pnpm-lock\.yaml|Dockerfile|docker-compose.*\.ya?ml)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # --- 3. Pastas ocultas e internas ---------------------------------
+    # Qualquer segmento começando com "." (/.git/config, /.deploy/.env),
+    # exceto /.well-known/ (validação de certificado SSL).
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+    # Pastas de código-fonte/dependências que não fazem parte do build,
+    # caso o projeto inteiro seja publicado por engano.
+    RewriteRule ^(src|node_modules|public|dist-ssr)(/|$) - [F,L]
+
+    # --- 4. Diretórios reais, exceto a raiz ---------------------------
+    # /assets e /assets/ respondem 404 em vez de revelar que a pasta
+    # existe. Os arquivos dentro dela continuam acessíveis (o index.html
+    # precisa carregar /assets/index-xxxx.js).
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^.+ - [R=404,L]
+
+    # --- 5. Arquivo existente: serve direto ---------------------------
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Asset inexistente é 404 de verdade (não cai no index.html, que
+    # devolveria HTML no lugar de JS/CSS)
+    RewriteRule ^assets/ - [R=404,L]
+
+    # --- 6. Demais rotas (GET/HEAD) carregam a SPA --------------------
+    RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+    RewriteRule ^ index.html [L]
+    RewriteRule ^ - [R=404,L]
+</IfModule>
+
+# --- 7. Cabeçalhos de segurança ---------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always unset X-Powered-By
+</IfModule>

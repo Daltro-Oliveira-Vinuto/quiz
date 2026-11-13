@@ -1,0 +1,33 @@
+# =====================================================================
+# .htaccess da raiz do frontend (Apache 2.4)
+#
+# O normal é publicar só o build (dist/), que já tem o próprio
+# .htaccess (gerado a partir de public/.htaccess). Este arquivo cobre o
+# caso de a pasta frontend/ inteira ficar exposta no servidor: aí só o
+# conteúdo de dist/ é acessível, e src/, node_modules/, .env, configs
+# etc. ficam bloqueados.
+# =====================================================================
+
+Options -Indexes -MultiViews
+
+# Arquivos ocultos (.env, .gitignore, .htaccess...) nunca são servidos
+<FilesMatch "^\.(?!well-known$)">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Toda requisição é atendida a partir de dist/. Assim /src/main.tsx,
+    # /.env ou /package.json caem nas regras do dist/.htaccess e são
+    # bloqueados, e as rotas normais do site continuam funcionando.
+    RewriteRule ^(?!dist/)(.*)$ dist/$1 [L]
+</IfModule>
+
+# Sem mod_rewrite: bloqueia pelo menos o que é sensível
+<IfModule !mod_rewrite.c>
+    RedirectMatch 404 "/(src|node_modules|public|\.[^/]+)(/|$)"
+    <FilesMatch "\.(env|map|ts|tsx|json|lock|md|log|sh)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>

@@ -1,5 +1,4 @@
 from django.utils import timezone
-from django.db.models import Max, Count, Avg
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -12,6 +11,7 @@ from .serializers import (
     AnswerSubmitSerializer,
     AnswerResultSerializer,
     QuizSessionCreateSerializer,
+    QuizSessionFinishSerializer,
     QuizSessionResultSerializer,
     RankingSerializer,
 )
@@ -67,13 +67,23 @@ def finish_session(request, pk):
     except QuizSession.DoesNotExist:
         return Response({"detail": "Sessão não encontrada."}, status=404)
 
-    session.score = request.data.get("score", 0)
-    session.total_questions = request.data.get("total_questions", 0)
+    # Valida antes de gravar: sem isso, um valor negativo ou não numérico
+    # vira erro 500 no banco (modo estrito do MySQL / CHECK do PostgreSQL).
+    serializer = QuizSessionFinishSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    session.score = serializer.validated_data["score"]
+    session.total_questions = serializer.validated_data["total_questions"]
     session.completed = True
     session.finished_at = timezone.now()
     session.save()
 
     return Response(QuizSessionResultSerializer(session).data)
+
+
+# Nomes tratados como "sem nome" e fora do ranking (comparação em Python,
+# independente da collation configurada no banco).
+ANONYMOUS_NAMES = {"", "anônimo", "anonimo"}
 
 
 @api_view(["GET"])
@@ -84,35 +94,41 @@ def ranking(request):
     Returns best score per player_name, ordered by percentage desc.
     Excludes 'Anônimo' and incomplete sessions.
     Optional filter by quiz_id.
+
+    O agrupamento por jogador é feito em Python, e não com GROUP BY no
+    banco, porque no MySQL o GROUP BY em texto segue a collation
+    (utf8mb4_0900_ai_ci), que ignora acentos e maiúsculas: "José", "jose"
+    e "JOSE" virariam um jogador só, e no PostgreSQL não. Assim o ranking
+    é igual nos dois bancos.
     """
     quiz_id = request.query_params.get("quiz_id")
 
-    qs = QuizSession.objects.filter(
-        completed=True,
-        total_questions__gt=0,
-    ).exclude(player_name__iexact="anônimo").exclude(player_name="")
+    qs = QuizSession.objects.filter(completed=True, total_questions__gt=0)
 
     if quiz_id:
         qs = qs.filter(quiz_id=quiz_id)
 
-    # Best session per player (by score then most recent)
-    # Group by player_name: pick max score, count games, avg percentage
-    from django.db.models import FloatField, ExpressionWrapper, F
-
-    best_per_player = list(
-        qs.values("player_name")
-        .annotate(
-            best_score=Max("score"),
-            games_played=Count("id"),
-            best_total=Max("total_questions"),
+    stats = {}
+    for player_name, score, total in qs.values_list(
+        "player_name", "score", "total_questions"
+    ).iterator():
+        if player_name.strip().casefold() in ANONYMOUS_NAMES:
+            continue
+        entry = stats.setdefault(
+            player_name,
+            {"player_name": player_name, "best_score": 0, "best_total": 0, "games_played": 0},
         )
-        # sem [:50] aqui
-    )
+        entry["best_score"] = max(entry["best_score"], score)
+        entry["best_total"] = max(entry["best_total"], total)
+        entry["games_played"] += 1
+
+    best_per_player = list(stats.values())
 
     def sort_key(x):
         total = x["best_total"] or 1
         pct = x["best_score"] / total
-        return (-pct, -x["games_played"])
+        # desempate final pelo nome, para a ordem ser sempre a mesma
+        return (-pct, -x["games_played"], x["player_name"])
 
     best_per_player.sort(key=sort_key)
     best_per_player = best_per_player[:50]
@@ -120,11 +136,7 @@ def ranking(request):
     # Attach quiz title if filtered
     quiz_title = None
     if quiz_id:
-        try:
-            from .models import Quiz
-            quiz_title = Quiz.objects.get(pk=quiz_id).title
-        except Quiz.DoesNotExist:
-            pass
+        quiz_title = Quiz.objects.filter(pk=quiz_id).values_list("title", flat=True).first()
 
     results = []
     for i, entry in enumerate(best_per_player, start=1):
