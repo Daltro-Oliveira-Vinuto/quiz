@@ -155,72 +155,78 @@ TEMPLATES = [
 # ==========================================================
 # DATABASE
 # ==========================================================
-"""
-if env("DATABASE_URL", default=None):
-    DATABASES = {
-        "default": dj_database_url.parse(
-            env("DATABASE_URL"),
-            conn_max_age=600,
-        )
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": env("DB_NAME"),
-            "USER": env("DB_USER"),
-            "PASSWORD": env("DB_PASSWORD"),
-            "HOST": env("DB_HOST"),
-            "PORT": env("DB_PORT"),
-        }
-    }
-"""
-
-# ==========================================================
-# DATABASE
-# ==========================================================
+# Banco escolhido pela variável DB_ENGINE do .env:
+#   DB_ENGINE=mysql     -> MySQL 8 (padrão)
+#   DB_ENGINE=mariadb   -> MariaDB (mesmo backend do MySQL)
+#   DB_ENGINE=postgres  -> PostgreSQL (driver psycopg já instalado)
+#
+# Conexão por uma das duas formas:
+#   1) DATABASE_URL=mysql://usuario:senha@host:3306/nome
+#      (ou postgresql://... quando DB_ENGINE=postgres)
+#   2) DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+#
+# O schema e as queries usam só o ORM do Django, sem SQL específico de
+# um banco, então as mesmas migrations servem para os dois.
 from django.core.exceptions import ImproperlyConfigured
 
-DB_ENGINE = env("DB_ENGINE", default="postgres").lower()
+DB_ENGINE = env("DB_ENGINE", default="mysql").strip().lower()
 
 DB_BACKENDS = {
-    "postgres": ("django.db.backends.postgresql", "5432"),
     "mysql": ("django.db.backends.mysql", "3306"),
+    "postgres": ("django.db.backends.postgresql", "5432"),
 }
+
+if DB_ENGINE == "postgresql":
+    DB_ENGINE = "postgres"
+elif DB_ENGINE == "mariadb":
+    # MariaDB usa o mesmo backend do MySQL no Django
+    DB_ENGINE = "mysql"
 
 if DB_ENGINE not in DB_BACKENDS:
     raise ImproperlyConfigured(
-        f"DB_ENGINE inválido: '{DB_ENGINE}'. Use 'postgres' ou 'mysql'."
+        f"DB_ENGINE inválido: '{DB_ENGINE}'. Use 'mysql' (padrão) ou 'postgres'."
     )
 
-if env("DATABASE_URL", default=None):
-    # O esquema da URL (postgres:// ou mysql://) define o banco
-    DATABASES = {
-        "default": dj_database_url.parse(
-            env("DATABASE_URL"),
-            conn_max_age=600,
-        )
-    }
-else:
-    backend, default_port = DB_BACKENDS[DB_ENGINE]
+DB_BACKEND, DB_DEFAULT_PORT = DB_BACKENDS[DB_ENGINE]
 
+DATABASE_URL = env("DATABASE_URL", default=None)
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600),
+    }
+    if DATABASES["default"]["ENGINE"] != DB_BACKEND:
+        raise ImproperlyConfigured(
+            f"DATABASE_URL não é de {DB_ENGINE}, mas DB_ENGINE={DB_ENGINE}. "
+            "Ajuste o DB_ENGINE ou a URL no .env."
+        )
+else:
     DATABASES = {
         "default": {
-            "ENGINE": backend,
+            "ENGINE": DB_BACKEND,
             "NAME": env("DB_NAME"),
             "USER": env("DB_USER"),
             "PASSWORD": env("DB_PASSWORD"),
             "HOST": env("DB_HOST", default="127.0.0.1"),
-            "PORT": env("DB_PORT", default=default_port),
+            "PORT": env("DB_PORT", default=DB_DEFAULT_PORT),
             "CONN_MAX_AGE": 600,
         }
     }
 
-    if DB_ENGINE == "mysql":
-        DATABASES["default"]["OPTIONS"] = {
-            "charset": "utf8mb4",
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        }
+if DB_ENGINE == "mysql":
+    # - utf8mb4: Unicode completo (acentos e emojis)
+    # - STRICT_TRANS_TABLES: erro em vez de truncar/converter dados
+    # - READ COMMITTED: mesmo isolamento padrão do PostgreSQL
+    DATABASES["default"].setdefault("OPTIONS", {}).update({
+        "charset": "utf8mb4",
+        "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        "isolation_level": "read committed",
+    })
+    # banco de testes criado já em utf8mb4
+    DATABASES["default"]["TEST"] = {
+        "CHARSET": "utf8mb4",
+        "COLLATION": "utf8mb4_unicode_ci",
+    }
 
 
 # ==========================================================

@@ -90,6 +90,18 @@ class QuizSessionCreateSerializer(serializers.ModelSerializer):
         fields = ["id", "quiz", "player_name"]
 
 
+class QuizSessionFinishSerializer(serializers.Serializer):
+    score = serializers.IntegerField(min_value=0)
+    total_questions = serializers.IntegerField(min_value=0)
+
+    def validate(self, data):
+        if data["score"] > data["total_questions"]:
+            raise serializers.ValidationError(
+                "A pontuação não pode ser maior que o total de questões."
+            )
+        return data
+
+
 class QuizSessionResultSerializer(serializers.ModelSerializer):
     percentage = serializers.IntegerField(read_only=True)
     quiz_title = serializers.CharField(source="quiz.title", read_only=True)
